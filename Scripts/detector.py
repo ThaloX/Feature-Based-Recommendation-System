@@ -6,6 +6,7 @@ fl = FaceLandmarks()
 facefl = FaceLandmarks()
 
 # Load and Resize Image
+#TODO Transform into function which takes image as argument and returns array of characteristics
 frame = cv2.imread("../Resources/Images/Nick.png")
 
 # Clone Image for Detection
