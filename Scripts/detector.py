@@ -1,92 +1,205 @@
 from facial_landmarks import FaceLandmarks
 from utils import *
-
-# Load the Face landmarks class
-fl = FaceLandmarks()
-facefl = FaceLandmarks()
-
-# Load and Resize Image
-# TODO Transform into function which takes image as argument and returns array of characteristics
-frame = cv2.imread("../Resources/Images/2.jpg")
-
-# Clone Image for Detection
-image = frame.copy()
-
-# Resize if needed
-h, w = image.shape[0], image.shape[1]
-scaleFactor = 1
-if h > 1000:
-    scaleFactor = 1000 / h * 0.9
-
-desired_size = (int(w * scaleFactor), int(h * scaleFactor))
-image = cv2.resize(image, desired_size)
+import os
+import shutil
 
 
-# 1. Face Landmarks Detection
-landmarks = fl.get_facial_landmarks(image)
-convexHull = cv2.convexHull(landmarks)
+def detector(frame):
+    # Load the Face landmarks class
+    fl = FaceLandmarks()
+    facefl = FaceLandmarks()
 
-# 2. Face Extraction
-face_x, face_y, face_w, face_h = cv2.boundingRect(convexHull)
-offset_x = int(face_w * 0.1)  # 10% of width
-offset_y = int(face_h * 0.1)  # 10% of height
+    # Clone Image for Detection
+    image = frame.copy()
 
-crop = image[face_y - offset_y:face_y + face_h + offset_y, face_x - offset_x:face_x + face_w + offset_x]
-face = crop.copy()
+    # Resize if needed
+    h, w = image.shape[0], image.shape[1]
+    scale_factor = 1
+    if h > 1000:
+        scale_factor = 1000 / h * 0.9
 
-# 3. Re-acquire the Landmarks and the contour
-facelm = facefl.get_facial_landmarks(face)
-faceconvexHull = cv2.convexHull(facelm)
+    desired_size = (int(w * scale_factor), int(h * scale_factor))
+    image = cv2.resize(image, desired_size)
 
-height, width, _ = crop.shape
+    # 1. Face Landmarks Detection
+    landmarks = fl.get_facial_landmarks(image)
+    convex_hull = cv2.convexHull(landmarks)
 
-# 4. Extract Iris to check colour
-lIris, rIris = getIrises(face, facelm)
+    # 2. Face Extraction
+    face_x, face_y, face_w, face_h = cv2.boundingRect(convex_hull)
+    offset_x = int(face_w * 0.1)  # 10% of width
+    offset_y = int(face_h * 0.1)  # 10% of height
 
-leftEyeClr = eye_color(lIris)
-rightEyeClr = eye_color(rIris)
+    crop = image[face_y - offset_y:face_y + face_h + offset_y, face_x - offset_x:face_x + face_w + offset_x]
+    face = crop.copy()
 
-print("Left eye color is:", leftEyeClr)
-print("Right eye color is:", rightEyeClr)
+    # 3. Re-acquire the Landmarks and the contour
+    facelm = facefl.get_facial_landmarks(face)
+    face_convex_hull = cv2.convexHull(facelm)
 
-# cv2.imshow("Left Iris", lIris)
-# cv2.imshow("Right Iris", rIris)
+    height, width, _ = crop.shape
 
-# 5. Mouth state
-_, mouth = isOpen(face, 'MOUTH', threshold=13.5, display=False)
-print("Mouth is:", mouth[0])
+    # 4. Extract Iris to check colour
+    l_iris, r_iris = getIrises(face, facelm)
 
-# 6. Create mask
-mask = np.zeros((height, width, 1), dtype=np.uint8)
-cv2.fillConvexPoly(mask, faceconvexHull, 255)
+    left_eye_clr = eye_color(l_iris)
+    right_eye_clr = eye_color(r_iris)
+
+    # print("Left eye color is:", left_eye_clr)
+    # print("Right eye color is:", right_eye_clr)
+
+    # 5. Mouth state
+    _, mouth = isOpen(face, 'MOUTH', threshold=13.5, display=False)
+    # print("Mouth is:", mouth[0])
+
+    # 6. Create mask
+    mask = np.zeros((height, width, 1), dtype=np.uint8)
+    cv2.fillConvexPoly(mask, face_convex_hull, 255)
+
+    # 7. Extract the face
+    lips_list = list(
+        [0, 13, 14, 146, 17, 178, 181, 185, 191, 267, 269, 270, 291, 308, 310, 311, 312, 314, 317, 318, 321, 324, 37,
+         375, 39, 40, 402,
+         405, 409, 415, 61, 78, 80, 81, 82, 84, 87, 88, 91, 95])
+    lips_contour = cv2.convexHull(facelm[lips_list])
+    cv2.fillConvexPoly(mask, lips_contour, 0)
+
+    right_eye_list = list(
+        [105, 107, 133, 144, 145, 153, 154, 155, 157, 158, 159, 160, 161, 163, 173, 246, 33, 46, 52, 53, 55, 63, 65, 66,
+         7, 70])
+    right_eye_contour = cv2.convexHull(facelm[right_eye_list])
+    cv2.fillConvexPoly(mask, right_eye_contour, 0)
+
+    left_eye_list = list(
+        [249, 263, 276, 282, 283, 285, 293, 295, 296, 300, 334, 336, 362, 373, 374, 380, 381, 382, 384, 385, 386, 387,
+         388, 390,
+         398, 466])
+    left_eye_contour = cv2.convexHull(facelm[left_eye_list])
+    cv2.fillConvexPoly(mask, left_eye_contour, 0)
+
+    # 8. Determine the skin tone
+    skin_tone = skin_color(face, mask)
+    # print("Skin tone is:", skin_tone)
+
+    # 9. Return values
+    return left_eye_clr, right_eye_clr, mouth[0], skin_tone
 
 
-# 7. Extract the face
-lipsList = list([0,13,14,146,17,178,181,185,191,267,269,270,291,308,310,311,312,314,317,318,321,324,37,375,39,40,402,
-                 405,409,415,61,78,80,81,82,84,87,88,91,95])
-lipsContour = cv2.convexHull(facelm[lipsList])
-cv2.fillConvexPoly(mask, lipsContour, 0)
+def satisfied_compare(user_input, detected):
+    count = 0
 
-rightEyeList = list([105,107,133,144,145,153,154,155,157,158,159,160,161,163,173,246,33,46,52,53,55,63,65,66,7,70])
-rightEyeContour = cv2.convexHull(facelm[rightEyeList])
-cv2.fillConvexPoly(mask, rightEyeContour, 0)
+    # Only one count up for the eyes
+    if user_input[0] == detected[0] or user_input[1] == detected[1]:
+        count = count + 1
 
-leftEyeList = list([249,263,276,282,283,285,293,295,296,300,334,336,362,373,374,380,381,382,384,385,386,387,388,390,
-                    398,466])
-leftEyeContour = cv2.convexHull(facelm[leftEyeList])
-cv2.fillConvexPoly(mask, leftEyeContour, 0)
+    # Rest of the characteristics
+    for i in range(len(user_input[2:-1])):
+        if user_input[i] == detected[i]:
+            count = count + 1
+        else:
+            continue
 
-# 8. Determine the skin tone
-skin_tone = skin_color(face, mask)
-print("Skin tone is:", skin_tone)
+    return count
 
 
-extracted = cv2.bitwise_and(face, face, mask=mask)
+def main():
+    # Get requirements
+    global eye_id, mouth_id, skin_id, min_req
 
-cv2.imshow('Face', face)
-# cv2.imshow('Mask', mask)
-# cv2.imshow('Extracted Skin', extracted)
+    eye_options = ["Blue", "Blue Gray", "Brown", "Brown Gray", "Brown Black", "Green", "Green Gray"]
+    mouth_options = ["Open", "Closed"]
+    skin_tone_options = ["Pale", "Caucasian", "Tanned", "Brown", "Brown Black"]
 
-# 9. Cleanup
-if cv2.waitKey(0) & 0xFF == ord('q'):
-    cv2.destroyAllWindows()
+    # Eye input
+    print("List of eye_options: ", eye_options)
+
+    while True:
+        try:
+            eye_id = int(input("Choose a colour from the list by typing its index (0-6): "))
+            if 0 <= eye_id <= 6:
+                break
+            else:
+                print("The number is out of range")
+        except ValueError:
+            print("Invalid argument")
+            continue
+
+    eye_req = eye_options[eye_id]
+    print(eye_req)
+
+    # Mouth input
+    print("List of mouth options: ", mouth_options)
+
+    while True:
+        try:
+            mouth_id = int(input("Choose an option from the list by typing its index (0-1): "))
+            if 0 <= mouth_id <= len(mouth_options) - 1:
+                break
+            else:
+                print("The number is out of range")
+        except ValueError:
+            print("Invalid argument")
+            continue
+
+    mouth_req = mouth_options[mouth_id]
+    print(mouth_req)
+
+    # Skin input
+    print("List of skin options: ", skin_tone_options)
+
+    while True:
+        try:
+            skin_id = int(input("Choose a colour from the list by typing its index (0-4): "))
+            if 0 <= skin_id <= len(skin_tone_options) - 1:
+                break
+            else:
+                print("The number is out of range")
+        except ValueError:
+            print("Invalid argument")
+            continue
+
+    skin_req = skin_tone_options[skin_id]
+    print(skin_req)
+
+    # Minimum requirements
+    while True:
+        try:
+            min_req = int(input("Choose the minimum number of requirements to be satisfied (1-3): "))
+            if 1 <= skin_id <= 3:
+                break
+            else:
+                print("The number is out of range")
+        except ValueError:
+            print("Invalid argument")
+            continue
+
+    required = [eye_req, eye_req, mouth_req, skin_req]
+
+    # Get images
+    directory = r'..\Resources\Images'
+    for filename in os.listdir(directory):
+        if filename.endswith(".jpg") or filename.endswith(".png"):
+            path = os.path.join(directory, filename)
+            frame = cv2.imread(path)
+
+            l_eye, r_eye, mouth, skin = detector(frame)
+            detected = [l_eye, r_eye, mouth, skin]
+            satisfied_requirements = satisfied_compare(required, detected)
+
+            print("min_req = ", min_req, "sat_req", satisfied_requirements)
+
+            if min_req <= satisfied_requirements:
+                dest = '../Results/' + filename
+                shutil.copyfile(path, dest)
+            else:
+                continue
+        else:
+            continue
+
+    # 9. Cleanup
+    if cv2.waitKey(0) & 0xFF == ord('q'):
+        cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    main()
