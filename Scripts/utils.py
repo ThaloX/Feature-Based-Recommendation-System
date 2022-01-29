@@ -1,9 +1,7 @@
 import cv2
 import itertools
 import numpy as np
-from time import time
 import mediapipe as mp
-import matplotlib.pyplot as plt
 
 # Initialize the mediapipe face mesh class.
 mp_face_mesh = mp.solutions.face_mesh
@@ -94,32 +92,19 @@ def isOpen(image, face_part, threshold=5, display=True):
                       detected faces.
     """
 
+def isOpen(image, face_part, threshold=5, display=True):
     # The output of the facial landmarks detection on the image
     face_mesh_results = face_mesh_images.process(image)
 
     # Retrieve the height and width of the image.
     image_height, image_width, _ = image.shape
 
-    # Create a copy of the input image to write the isOpen status.
-    output_image = image.copy()
-
     # Create a dictionary to store the isOpen status of the face part of all the detected faces.
     status = {}
 
-    # Check if the face part is mouth.
-    if face_part == 'MOUTH':
+    # Get the indexes of the mouth.
+    INDEXES = mp_face_mesh.FACEMESH_LIPS
 
-        # Get the indexes of the mouth.
-        INDEXES = mp_face_mesh.FACEMESH_LIPS
-
-        # Specify the location to write the is mouth open status.
-        loc = (10, image_height - image_height // 40)
-
-        # Initialize a increment that will be added to the status writing location,
-        # so that the statuses of two faces donot overlap.
-        increment = -30
-    else:
-        return
 
     # Iterate over the found faces.
     for face_no, face_landmarks in enumerate(face_mesh_results.multi_face_landmarks):
@@ -136,36 +121,22 @@ def isOpen(image, face_part, threshold=5, display=True):
             # Set status of the face part to open.
             status[face_no] = 'Open'
 
-            # Set color which will be used to write the status to green.
-            color = (0, 255, 0)
-
         # Otherwise.
         else:
             # Set status of the face part to close.
             status[face_no] = 'Closed'
 
-            # Set color which will be used to write the status to red.
-            color = (0, 0, 255)
+    return status
 
-        # Write the face part isOpen status on the output image at the appropriate location.
-        cv2.putText(output_image, f'FACE {face_no + 1} {face_part} {status[face_no]}.',
-                    (loc[0], loc[1] + (face_no * increment)), cv2.FONT_HERSHEY_PLAIN, 1.4, color, 2)
-
-    # Check if the output image is specified to be displayed.
-    if display:
-
-        # Display the output image.
-        plt.figure(figsize=[10, 10])
-        plt.imshow(output_image[:, :, ::-1])
-        plt.title("Output Image")
-        plt.axis('off')
-
-    # Otherwise
+# Color
+def check_color(hsv, color):
+    if (hsv[0] >= color[0][0]) and (hsv[0] <= color[1][0]) and (hsv[1] >= color[0][1]) and \
+            hsv[1] <= color[1][1] and (hsv[2] >= color[0][2]) and (hsv[2] <= color[1][2]):
+        return True
     else:
+        return False
 
-        # Return the output image and the isOpen statuses of the face part of each detected face.
-        return output_image, status
-
+## Eyes
 
 # Define HSV color ranges for eyes colors
 eye_class_name = ("Blue", "Blue Gray", "Brown", "Brown Gray", "Brown Black", "Green", "Green Gray", "Other")
@@ -179,16 +150,7 @@ EyeColor = {
     eye_class_name[6]: ((60, 2, 25), (165, 20, 65))
 }
 
-
-def check_color(hsv, color):
-    if (hsv[0] >= color[0][0]) and (hsv[0] <= color[1][0]) and (hsv[1] >= color[0][1]) and \
-            hsv[1] <= color[1][1] and (hsv[2] >= color[0][2]) and (hsv[2] <= color[1][2]):
-        return True
-    else:
-        return False
-
-
-# define eye color category rules in HSV space
+# Assign pixel color in HSV space to a category
 def find_eye_class(hsv):
     color_id = len(eye_class_name) - 1
     for i in range(len(eye_class_name) - 1):
@@ -219,15 +181,17 @@ def eye_color(image):
 
     main_color_index = np.argmax(eye_class[:len(eye_class) - 1])
 
-    # total_vote = eye_class.sum()
-    # print("\n\nDominant Eye Color: ", eye_class_name[main_color_index])
-    # print("\n **Eyes Color Percentage **")
-    # for i in range(len(eye_class_name)):
-    #     print(eye_class_name[i], ": ", round(eye_class[i] / total_vote * 100, 2), "%")
+    total_vote = eye_class.sum()
+    #print("\n\nDominant Eye Color: ", eye_class_name[main_color_index])
+    #print("\n **Eyes Color Percentage **")
+    percent = []
+    for i in range(len(eye_class_name)):
+        #print(eye_class_name[i], ": ", round(eye_class[i] / total_vote * 100, 2), "%")
+        percent.append(round(eye_class[i] / total_vote * 100, 2))
 
-    return eye_class_name[main_color_index]
+    return eye_class_name[main_color_index], percent
 
-
+## Skin
 # Define HSV color ranges for skin tones
 skin_class_name = ("Pale", "Caucasian", "Tanned", "Brown", "Brown Black", "Other")
 SkinTone = {
@@ -239,7 +203,7 @@ SkinTone = {
 }
 
 
-# define eye color category rules in HSV space
+# Assign pixel color in HSV space to a category
 def find_skin_class(hsv):
     color_id = len(skin_class_name) - 1
     for i in range(len(skin_class_name) - 1):
@@ -261,10 +225,11 @@ def skin_color(image, skin_mask):
 
     main_color_index = np.argmax(skin_class[:len(skin_class) - 1])
 
-    # total_vote = eye_class.sum()
-    # print("\n\nDominant Eye Color: ", eye_class_name[main_color_index])
-    # print("\n **Eyes Color Percentage **")
-    # for i in range(len(eye_class_name)):
-    #     print(eye_class_name[i], ": ", round(eye_class[i] / total_vote * 100, 2), "%")
+    total_vote = skin_class.sum()
 
-    return skin_class_name[main_color_index]
+    percent = []
+    for i in range(len(skin_class_name)):
+        percent.append(round(skin_class[i] / total_vote * 100, 2))
+
+    return skin_class_name[main_color_index], percent
+

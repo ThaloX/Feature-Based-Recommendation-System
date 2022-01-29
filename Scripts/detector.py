@@ -42,15 +42,22 @@ def detector(frame):
     # 4. Extract Iris to check colour
     l_iris, r_iris = getIrises(face, facelm)
 
-    left_eye_clr = eye_color(l_iris)
-    right_eye_clr = eye_color(r_iris)
+    left_eye_clr, lprc = eye_color(l_iris)
+    right_eye_clr, rprc = eye_color(r_iris)
+
+    # Table of Percentages
+    head = ["Eye", "Blue", "Blue Gray", "Brown", "Brown Gray", "Brown Black", "Green", "Green Gray", "Other"]
+
+    # display table
+    print(head)
+    print(["L", lprc])
+    print(["R", rprc])
 
     # print("Left eye color is:", left_eye_clr)
     # print("Right eye color is:", right_eye_clr)
 
     # 5. Mouth state
-    _, mouth = isOpen(face, 'MOUTH', threshold=13.5, display=False)
-    # print("Mouth is:", mouth[0])
+    mouth = isOpen(face, 'MOUTH', threshold=13.5, display=False)
 
     # 6. Create mask
     mask = np.zeros((height, width, 1), dtype=np.uint8)
@@ -64,12 +71,6 @@ def detector(frame):
     lips_contour = cv2.convexHull(facelm[lips_list])
     cv2.fillConvexPoly(mask, lips_contour, 0)
 
-    right_eye_list = list(
-        [105, 107, 133, 144, 145, 153, 154, 155, 157, 158, 159, 160, 161, 163, 173, 246, 33, 46, 52, 53, 55, 63, 65, 66,
-         7, 70])
-    right_eye_contour = cv2.convexHull(facelm[right_eye_list])
-    cv2.fillConvexPoly(mask, right_eye_contour, 0)
-
     left_eye_list = list(
         [249, 263, 276, 282, 283, 285, 293, 295, 296, 300, 334, 336, 362, 373, 374, 380, 381, 382, 384, 385, 386, 387,
          388, 390,
@@ -77,9 +78,23 @@ def detector(frame):
     left_eye_contour = cv2.convexHull(facelm[left_eye_list])
     cv2.fillConvexPoly(mask, left_eye_contour, 0)
 
+    right_eye_list = list(
+        [105, 107, 133, 144, 145, 153, 154, 155, 157, 158, 159, 160, 161, 163, 173, 246, 33, 46, 52, 53, 55, 63, 65, 66,
+         7, 70])
+    right_eye_contour = cv2.convexHull(facelm[right_eye_list])
+    cv2.fillConvexPoly(mask, right_eye_contour, 0)
+
+
+
     # 8. Determine the skin tone
-    skin_tone = skin_color(face, mask)
+    skin_tone, sprc = skin_color(face, mask)
     # print("Skin tone is:", skin_tone)
+    # Table of Percentages
+    head = ["Pale", "Caucasian", "Tanned", "Brown", "Brown Black", "Other"]
+
+    # display table
+    print(head)
+    print(sprc)
 
     # 9. Return values
     return left_eye_clr, right_eye_clr, mouth[0], skin_tone
@@ -93,7 +108,7 @@ def satisfied_compare(user_input, detected):
         count = count + 1
 
     # Rest of the characteristics
-    for i in range(len(user_input[2:-1])):
+    for i in range(len(user_input[2:])):
         if user_input[i] == detected[i]:
             count = count + 1
         else:
@@ -172,6 +187,7 @@ def main():
         except ValueError:
             print("Invalid argument")
             continue
+    print("\n\n")
 
     required = [eye_req, eye_req, mouth_req, skin_req]
 
@@ -184,9 +200,10 @@ def main():
 
             l_eye, r_eye, mouth, skin = detector(frame)
             detected = [l_eye, r_eye, mouth, skin]
+
             satisfied_requirements = satisfied_compare(required, detected)
 
-            print("min_req = ", min_req, "sat_req", satisfied_requirements)
+            print(filename, "\t\tMin required: ", min_req, "Satisfied: ", satisfied_requirements, "\n\n")
 
             if min_req <= satisfied_requirements:
                 dest = '../Results/' + filename
