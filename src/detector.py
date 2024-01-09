@@ -192,7 +192,7 @@ def main():
     required = [eye_req, eye_req, mouth_req, skin_req]
 
     # Get images
-    directory = r'.\resources\images'
+    directory = r'.\images'
     for filename in os.listdir(directory):
         if filename.endswith(".jpg") or filename.endswith(".png"):
             path = os.path.join(directory, filename)
