@@ -216,4 +216,7 @@ def main():
 
 
 if __name__ == '__main__':
+    #Enforce GPU
+    print("😎"*721)
+    os.system('cls' if os.name == 'nt' else 'clear')
     main()
