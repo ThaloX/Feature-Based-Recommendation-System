@@ -1,10 +1,24 @@
 from facial_landmarks import FaceLandmarks
+
 from utils import *
 import os
 import shutil
 
 
-def detector(frame):
+def detect(frame: cv2.typing.MatLike) -> tuple:
+    """
+    Detects facial features and extracts relevant information from the given frame.
+
+    Args:
+        frame (cv2.typing.MatLike): The input frame containing a face.
+
+    Returns:
+        tuple: A tuple containing the following information:
+            - left_eye_clr (str): The color of the left eye.
+            - right_eye_clr (str): The color of the right eye.
+            - mouth_state (bool): The state of the mouth (open or closed).
+            - skin_tone (str): The skin tone of the face.
+    """
     # Load the Face landmarks class
     fl = FaceLandmarks()
     facefl = FaceLandmarks()
@@ -17,7 +31,6 @@ def detector(frame):
     scale_factor = 1
     if h > 1000:
         scale_factor = 1000 / h * 0.9
-
     desired_size = (int(w * scale_factor), int(h * scale_factor))
     image = cv2.resize(image, desired_size)
 
@@ -41,7 +54,6 @@ def detector(frame):
 
     # 4. Extract Iris to check colour
     l_iris, r_iris = getIrises(face, facelm)
-
     left_eye_clr, lprc = eye_color(l_iris)
     right_eye_clr, rprc = eye_color(r_iris)
 
@@ -64,27 +76,17 @@ def detector(frame):
     cv2.fillConvexPoly(mask, face_convex_hull, 255)
 
     # 7. Extract the face
-    lips_list = list(
-        [0, 13, 14, 146, 17, 178, 181, 185, 191, 267, 269, 270, 291, 308, 310, 311, 312, 314, 317, 318, 321, 324, 37,
-         375, 39, 40, 402,
-         405, 409, 415, 61, 78, 80, 81, 82, 84, 87, 88, 91, 95])
+    lips_list = list([0, 13, 14, 146, 17, 178, 181, 185, 191, 267, 269, 270, 291, 308, 310, 311, 312, 314, 317, 318, 321, 324, 37, 375, 39, 40, 402, 405, 409, 415, 61, 78, 80, 81, 82, 84, 87, 88, 91, 95])
     lips_contour = cv2.convexHull(facelm[lips_list])
     cv2.fillConvexPoly(mask, lips_contour, 0)
 
-    left_eye_list = list(
-        [249, 263, 276, 282, 283, 285, 293, 295, 296, 300, 334, 336, 362, 373, 374, 380, 381, 382, 384, 385, 386, 387,
-         388, 390,
-         398, 466])
+    left_eye_list = list([249, 263, 276, 282, 283, 285, 293, 295, 296, 300, 334, 336, 362, 373, 374, 380, 381, 382, 384, 385, 386, 387, 388, 390, 398, 466])
     left_eye_contour = cv2.convexHull(facelm[left_eye_list])
     cv2.fillConvexPoly(mask, left_eye_contour, 0)
 
-    right_eye_list = list(
-        [105, 107, 133, 144, 145, 153, 154, 155, 157, 158, 159, 160, 161, 163, 173, 246, 33, 46, 52, 53, 55, 63, 65, 66,
-         7, 70])
+    right_eye_list = list([105, 107, 133, 144, 145, 153, 154, 155, 157, 158, 159, 160, 161, 163, 173, 246, 33, 46, 52, 53, 55, 63, 65, 66, 7, 70])
     right_eye_contour = cv2.convexHull(facelm[right_eye_list])
     cv2.fillConvexPoly(mask, right_eye_contour, 0)
-
-
 
     # 8. Determine the skin tone
     skin_tone, sprc = skin_color(face, mask)
@@ -113,7 +115,6 @@ def satisfied_compare(user_input, detected):
             count = count + 1
         else:
             continue
-
     return count
 
 
@@ -127,7 +128,6 @@ def main():
 
     # Eye input
     print("List of eye_options: ", eye_options)
-
     while True:
         try:
             eye_id = int(input("Choose a colour from the list by typing its index (0-6): "))
@@ -144,7 +144,6 @@ def main():
 
     # Mouth input
     print("List of mouth options: ", mouth_options)
-
     while True:
         try:
             mouth_id = int(input("Choose an option from the list by typing its index (0-1): "))
@@ -161,7 +160,6 @@ def main():
 
     # Skin input
     print("List of skin options: ", skin_tone_options)
-
     while True:
         try:
             skin_id = int(input("Choose a colour from the list by typing its index (0-4): "))
@@ -198,15 +196,14 @@ def main():
             path = os.path.join(directory, filename)
             frame = cv2.imread(path)
 
-            l_eye, r_eye, mouth, skin = detector(frame)
+            l_eye, r_eye, mouth, skin = detect(frame)
             detected = [l_eye, r_eye, mouth, skin]
 
             satisfied_requirements = satisfied_compare(required, detected)
-
             print(filename, "\t\tMin required: ", min_req, "Satisfied: ", satisfied_requirements, "\n\n")
 
             if min_req <= satisfied_requirements:
-                dest = '../Results/' + filename
+                dest = './results/' + filename
                 shutil.copyfile(path, dest)
             else:
                 continue
