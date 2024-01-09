@@ -180,7 +180,7 @@ def main():
     while True:
         try:
             min_req = int(input("Choose the minimum number of requirements to be satisfied (1-3): "))
-            if 1 <= skin_id <= 3:
+            if 1 <= min_req <= 3:
                 break
             else:
                 print("The number is out of range")
@@ -192,7 +192,7 @@ def main():
     required = [eye_req, eye_req, mouth_req, skin_req]
 
     # Get images
-    directory = r'..\Resources\Images'
+    directory = r'.\resources\images'
     for filename in os.listdir(directory):
         if filename.endswith(".jpg") or filename.endswith(".png"):
             path = os.path.join(directory, filename)

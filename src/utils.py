@@ -7,12 +7,10 @@ import mediapipe as mp
 mp_face_mesh = mp.solutions.face_mesh
 
 # Setup the face landmarks function for images.
-face_mesh_images = mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=2,
-                                         min_detection_confidence=0.5)
+face_mesh_images = mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=2, min_detection_confidence=0.5)
 
 # Setup the face landmarks function for videos.
-face_mesh_videos = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1,
-                                         min_detection_confidence=0.5, min_tracking_confidence=0.3)
+face_mesh_videos = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, min_detection_confidence=0.5, min_tracking_confidence=0.3)
 
 # Initialize the mediapipe drawing styles class.
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -91,8 +89,6 @@ def isOpen(image, face_part, threshold=5, display=True):
         status:       A dictionary containing isOpen statuses of the face part of all the
                       detected faces.
     """
-
-def isOpen(image, face_part, threshold=5, display=True):
     # The output of the facial landmarks detection on the image
     face_mesh_results = face_mesh_images.process(image)
 
@@ -172,7 +168,7 @@ def eye_color(image):
 
     # cv2.circle(image, pupil_coords, int(eye_radius), (0, 155, 255), 1)
 
-    eye_class = np.zeros(len(eye_class_name), np.float)
+    eye_class = np.zeros(len(eye_class_name), float)
 
     for y in range(0, h):
         for x in range(0, w):
@@ -216,7 +212,7 @@ def skin_color(image, skin_mask):
     imgHSV = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     h, w = image.shape[0], image.shape[1]
 
-    skin_class = np.zeros(len(skin_class_name), np.float)
+    skin_class = np.zeros(len(skin_class_name), float)
 
     for y in range(0, h):
         for x in range(0, w):
@@ -232,4 +228,3 @@ def skin_color(image, skin_mask):
         percent.append(round(skin_class[i] / total_vote * 100, 2))
 
     return skin_class_name[main_color_index], percent
-

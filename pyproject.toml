@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "feature-based-recommendation-system"
+version = "0.1.0"
+description = ""
+authors = ["ThaloX <vlad.bugnariu@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+mediapipe = "^0.10.9"
+opencv-python = "^4.9.0.80"
+pandas = "^2.1.4"
+matplotlib = "^3.8.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
